@@ -1,0 +1,177 @@
+import matplotlib.pyplot as plt
+import numpy as np
+from sympy import integrate
+from sympy.solvers import solve
+from sympy import Symbol
+import random
+import argparse
+from pandas import DataFrame
+
+mmin = 0.08
+mmax = 100
+Num = 1000
+
+N = []
+Mass = []
+R = []
+L = []
+T = []
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-sp", "--salpeter", action="store_true", help="Salpeter IMF")
+parser.add_argument("-kr", "--kroupa", action="store_true", help="Kroupa IMF")
+args = parser.parse_args()
+
+def salpeter(M):
+
+    """Defines Salpeter IMF"""
+
+    return M**(-2.35)
+
+def salpeterint(a, b):
+
+    """Integrates Salpeter IMF"""
+
+    M = Symbol('M')
+    result = integrate(salpeter(M), (M, a, b))
+    return result
+
+def kroupa1(M):
+    return M**(-0.3)
+
+def kroupa2(M):
+    return M**(-1.3)
+
+def kroupa3(M):
+    return M**(-2.3)
+
+def kroupa1int(a, b):
+    M = Symbol('M')
+    result = integrate(kroupa1(M), (M, a, b))
+    return result
+
+def kroupa2int(a, b):
+    M = Symbol('M')
+    result = integrate(kroupa2(M), (M, a, b))
+    return result
+
+def kroupa3int(a, b):
+    M = Symbol('M')
+    result = integrate(kroupa3(M), (M, a, b))
+    return result
+
+J = salpeterint(mmin, mmax)
+K = (J)**(-1) #Normalization constant
+
+a = kroupa1int(mmin, 0.08)
+b = kroupa2int(0.08, 0.5)
+c = kroupa3int(0.5, mmax)
+
+E = a + b + c
+F = (E)**(-1)
+
+A = Num*F
+B = Num*F
+C = Num*F
+
+def salpsolve(i):
+
+    x = Symbol('x')
+    au = solve(Num * K * salpeterint(mmin, x) - i, x)
+    al = solve(Num * K * salpeterint(mmin, x) - (i - 1), x)
+    p = random.uniform(al[0], au[0])
+    N.append(i)
+    Mass.append(p)
+
+def kroupsolve(i):
+
+    x = Symbol('x')
+    if i <= a * A:
+        au = solve(A * kroupa1int(mmin, x) - i, x)
+        al = solve(A * kroupa1int(mmin, x) - (i - 1), x)
+    elif a * A < i and i <= b * B:
+        au = solve(A * a + B * kroupa2int(0.08, x) - i, x)
+        al = solve(A * a + B * kroupa2int(0.08, x) - (i - 1), x)
+    elif b * B < i:
+        au = solve(A * a + B * b + C * kroupa3int(0.5, x) - i, x)
+        al = solve(A * a + B * b + C * kroupa3int(0.5, x) - (i - 1), x)
+
+    p = random.uniform(al[0], au[0])
+    N.append(i)
+    Mass.append(p)
+
+if args.salpeter:
+    for i in range(1, Num + 1):
+        salpsolve(i)
+
+elif args.kroupa:
+    for i in range(1, Num + 1):
+        kroupsolve(i)
+
+file = open('Data.txt', 'w')
+for index in range(len(R)):
+    file.write("Number" + "        " + "Mass" + "\n")
+    file.write("  " + str(R[index]) + "    " + str(S[index]) + "\n")
+
+file.close()
+
+alpha = 0.39704170
+beta = 8.52762600
+gamma = 0.00025546
+delta = 5.43288900
+epsilon = 5.56357900
+zeta = 0.78866060
+eta = 0.00586685
+
+theta = 1.71535900
+iota = 6.59778800
+kappa = 10.08855000
+lambd = 1.01249500
+mu = 0.07490166
+nu = 0.01077422
+xi = 3.08223400
+omicron = 17.84778000
+pi = 0.00022582
+
+sigma = 5.67*10**(-8)
+
+def Lum(M):
+    return (alpha*M**(5.5)+beta*M**(11))*(gamma+M**(3)+delta*M**(5)+epsilon*M**(7)+zeta*M**(8)+eta*M**(9.5))**(-1)
+
+def Lums(M):
+    return Lum(M)*3.828*10**(26)
+
+def Rad(M):
+    return (theta*M**(2.5)+iota*M**(6.5)+kappa*M**(11)+lambd*M**(19)+mu*M**(19.5))*(nu+xi*M**(2)+omicron*M**(8.5)+M**(18.5)+pi*M**(19.5))**(-1)
+
+def Rads(M):
+    return Rad(M)*6.957*10**(8)
+
+def Tem(M):
+    return ((Lums(M))*(Rads(M)*Rads(M)*4*3.14*sigma)**(-1))**(.25)
+
+for i in range(1, Num+1):
+    R.append(Rad(Mass[i-1]))
+    L.append(Lum(Mass[i-1]))
+    T.append(Tem(Mass[i-1]))
+
+plt.subplot(221)
+plt.loglog(Mass, R, 'kx')
+plt.xlabel('$\log M/M_{\odot}$')
+plt.ylabel('$\log R/R_{\odot}$')
+plt.subplot(222)
+plt.loglog(Mass, L, 'kx')
+plt.xlabel('$\log M/M_{\odot}$')
+plt.ylabel('$\log L/L_{\odot}$')
+plt.subplot(223)
+plt.semilogx(Mass, T, 'kx')
+plt.xlabel('$\log M/M_{\odot}$')
+plt.ylabel('$T\mathrm{ (K)}$')
+plt.subplot(224)
+plt.loglog(T, L, 'kx')
+plt.xlabel('$T\mathrm{ (K)}$')
+plt.ylabel('$\log L/L_{\odot}$')
+plt.gca().invert_xaxis()
+plt.show()
+df = DataFrame({'Number': N, 'Mass': Mass, 'Radius': R, 'Luminosity': L, 'Temperature': T})
+df.to_excel('PopgenData1.xlsx', sheet_name='sheet1', index=False)
