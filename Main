@@ -1,21 +1,22 @@
+import random
+import argparse
+from pandas import DataFrame
+
 import matplotlib.pyplot as plt
 import numpy as np
 from sympy import integrate
 from sympy.solvers import solve
 from sympy import Symbol
-import random
-import argparse
-from pandas import DataFrame
 
-mmin = 0.08
-mmax = 100
-Num = 1000
+mmin = 0.08 #Minimum mass
+mmax = 100  #Maximum mass
+Num = 100   #Number of stars
 
-N = []
-Mass = []
-R = []
-L = []
-T = []
+N = [0]     #Number of star i
+Mass = [0]  #Mass of star i
+R = [0]     #Radius of star i
+L = [0]     #Luminosity of star i
+T = [0]     #Surface temperature of star i
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-sp", "--salpeter", action="store_true", help="Salpeter IMF")
@@ -60,13 +61,12 @@ def kroupa3int(a, b):
     result = integrate(kroupa3(M), (M, a, b))
     return result
 
-J = salpeterint(mmin, mmax)
-K = (J)**(-1) #Normalization constant
+J = salpeterint(mmin, mmax) #Unnormalized integral
+K = (J)**(-1)               #Normalization constant
 
 a = kroupa1int(mmin, 0.08)
 b = kroupa2int(0.08, 0.5)
 c = kroupa3int(0.5, mmax)
-
 E = a + b + c
 F = (E)**(-1)
 
@@ -108,13 +108,6 @@ elif args.kroupa:
     for i in range(1, Num + 1):
         kroupsolve(i)
 
-file = open('Data.txt', 'w')
-for index in range(len(R)):
-    file.write("Number" + "        " + "Mass" + "\n")
-    file.write("  " + str(R[index]) + "    " + str(S[index]) + "\n")
-
-file.close()
-
 alpha = 0.39704170
 beta = 8.52762600
 gamma = 0.00025546
@@ -151,9 +144,9 @@ def Tem(M):
     return ((Lums(M))*(Rads(M)*Rads(M)*4*3.14*sigma)**(-1))**(.25)
 
 for i in range(1, Num+1):
-    R.append(Rad(Mass[i-1]))
-    L.append(Lum(Mass[i-1]))
-    T.append(Tem(Mass[i-1]))
+    R.append(Rad(Mass[i]))
+    L.append(Lum(Mass[i]))
+    T.append(Tem(Mass[i]))
 
 plt.subplot(221)
 plt.loglog(Mass, R, 'kx')
